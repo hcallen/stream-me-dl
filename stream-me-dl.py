@@ -16,7 +16,9 @@ def main():
     manifest_response = requests.get(manifest_url)
     manifest = json.loads(manifest_response.text)
     videos = get_videos(title_slug, manifest)
-    ts_urls = get_ts_urls(videos[1].m3u8_location)
+    video = videos[1]
+    print(f'Video: {video.title}_{video.video_height}p.ts')
+    ts_urls = get_ts_urls(video.m3u8_location)
     temp_dir = tempfile.TemporaryDirectory()
     out_files = download_ts_files(temp_dir, ts_urls)
     merge_ts(out_files, title_slug + '.ts')
@@ -62,7 +64,7 @@ def get_context(url):
 def download_ts_files(temp_dir, ts_urls):
     out_files = []
     for i, url in enumerate(ts_urls):
-        print(f'Downloading part {i + 1} of {len(ts_urls)}')
+        print(f'Downloading part {i + 1} of {len(ts_urls)}\r', end='')
         response = requests.get(url)
         out_file = os.path.join(temp_dir.name, str(i) + '.ts')
         with open(out_file, 'wb') as f:
