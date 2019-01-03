@@ -5,6 +5,7 @@ import re
 import shutil
 import sys
 import tempfile
+from time import sleep
 from videos import SourceVideo, CompressedVideo
 
 
@@ -13,14 +14,15 @@ def main():
     context = get_context(vod_url)
     title_slug = context['vod']['titleSlug']
     manifest_url = context['vod']['_links']['manifest']['href']
-    manifest_response = requests.get(manifest_url)
-    manifest = json.loads(manifest_response.text)
+    response = requests.get(manifest_url)
+    manifest = json.loads(response.text)
     videos = get_videos(title_slug, manifest)
     video = videos[1]
     print(f'Video: {video.title}_{video.video_height}p.ts')
     ts_urls = get_ts_urls(video.m3u8_location)
     temp_dir = tempfile.TemporaryDirectory()
     out_files = download_ts_files(temp_dir, ts_urls)
+    print('Merging files')
     merge_ts(out_files, title_slug + '.ts')
     temp_dir.cleanup()
     print('Done!')
@@ -63,15 +65,25 @@ def get_context(url):
 
 def download_ts_files(temp_dir, ts_urls):
     out_files = []
-    for i, url in enumerate(ts_urls):
-        print(f'Downloading part {i + 1} of {len(ts_urls)}\r', end='')
-        response = requests.get(url)
-        out_file = os.path.join(temp_dir.name, str(i) + '.ts')
-        with open(out_file, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=1024):
-                if chunk:
-                    f.write(chunk)
-        out_files.append(out_file)
+    i = 0
+    while i < len(ts_urls):
+        try:
+            print(f'Downloading part {i + 1} of {len(ts_urls)}', end='\r')
+            response = requests.get(ts_urls[i])
+            out_file = os.path.join(temp_dir.name, str(i) + '.ts')
+            with open(out_file, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
+            out_files.append(out_file)
+            i += 1
+
+        except requests.ConnectionError:
+            print('')
+            print(f'Failed to download part {i + 1} of {len(ts_urls)}')
+            print(f'Retrying download')
+            sleep(3)
+    print('')
     return out_files
 
 
@@ -87,11 +99,10 @@ def get_ts_urls(m3u8_url):
 def merge_ts(ts_list, out_file, out_dir=None):
     if not out_dir:
         out_dir = os.getcwd()
-    print('Merging files...')
     with open(os.path.join(out_dir, out_file), 'wb') as merged:
         for ts_file in ts_list:
-            with open(ts_file, 'rb') as mergefile:
-                shutil.copyfileobj(mergefile, merged)
+            with open(ts_file, 'rb') as merged_file:
+                shutil.copyfileobj(merged_file, merged)
 
 
 if __name__ == "__main__":
