@@ -7,22 +7,26 @@ A script to download Stream.me VODs.
 [Requests](http://docs.python-requests.org/en/master/)
 
 ## Usage
+
+
+Download highest quality compressed video available
 ```console
-
-# Download highest quality compressed video available
 $ python3 stream-me-dl.py https://www.stream.me/archive/username/video_title/vod_id
-
-# List available video qualities
+```
+List available video qualities
+```console
 $ python3 stream-me-dl.py --l https://www.stream.me/archive/username/video_title/vod_id
 
 S - Source
 1 - 854x480
 2 - 370x208
-
-# Download second listed quality
+```
+Download second listed quality
+```console
 $ python3 stream-me-dl.py -q 2 https://www.stream.me/archive/username/video_title/vod_id
-
-# Download source quality
+```
+Download source quality
+```console
 $ python3 stream-me-dl.py -q S https://www.stream.me/archive/username/video_title/vod_id
 
 ```
