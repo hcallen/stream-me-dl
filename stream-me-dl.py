@@ -14,8 +14,8 @@ def main():
     # define args
     parser = argparse.ArgumentParser()
     parser.add_argument('url', help='vod archive url')
-    parser.add_argument('-l', '--list', help='list available encodings', action='store_true')
-    parser.add_argument('-q', '--quality', help='define which quality of video to download', action='store_true', default=1)
+    parser.add_argument('-l', '--list', help='list available encodings and exit', action='store_true')
+    parser.add_argument('-q', '--quality', help='define which quality of video to download', metavar='#', default=1)
     args = parser.parse_args()
 
     context = get_context(args.url)
@@ -34,7 +34,7 @@ def main():
 
     if args.quality:
 
-        if args.quality.upper() == 'S':
+        if type(args.quality) is str and args.quality.upper() == 'S':
             video = get_source(title_slug, manifest)
             download_source(video)
 
