@@ -29,7 +29,7 @@ $ python3 stream-me-dl.py https://www.stream.me/archive/username/video_title/vod
 ```
 List available video qualities
 ```console
-$ python3 stream-me-dl.py --l https://www.stream.me/archive/username/video_title/vod_id
+$ python3 stream-me-dl.py -l https://www.stream.me/archive/username/video_title/vod_id
 
 S - Source
 1 - 854x480
