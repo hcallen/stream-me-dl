@@ -1,42 +1,83 @@
+import argparse
 import json
 import os
 import requests
 import re
 import shutil
-import sys
 import tempfile
 from time import sleep
 from videos import SourceVideo, CompressedVideo
+import sys
 
 
 def main():
-    vod_url = sys.argv[1]
-    context = get_context(vod_url)
+    # define args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('url', help='vod archive url')
+    parser.add_argument('-l', '--list', help='list available encodings', action='store_true')
+    parser.add_argument('-q', '--quality', help='define which quality of video to download', default=1)
+    args = parser.parse_args()
+
+    context = get_context(args.url)
     title_slug = context['vod']['titleSlug']
     manifest_url = context['vod']['_links']['manifest']['href']
     response = requests.get(manifest_url)
     manifest = json.loads(response.text)
-    videos = get_videos(title_slug, manifest)
-    video = videos[1]
-    print(f'Video: {video.title}_{video.video_height}p.ts')
-    ts_urls = get_ts_urls(video.m3u8_location)
-    temp_dir = tempfile.TemporaryDirectory()
-    out_files = download_ts_files(temp_dir, ts_urls)
-    print('Merging files')
-    merge_ts(out_files, title_slug + '.ts')
-    temp_dir.cleanup()
+
+    if args.list:
+        videos = get_encodings(title_slug, manifest)
+        print_qualities(videos)
+        sys.exit(0)
+
+    if args.list and args.quality:
+        raise Exception('Invalid option combination')
+
+    if args.quality:
+
+        if args.quality.upper() == 'S':
+            video = get_source(title_slug, manifest)
+            download_source(video)
+
+        elif args.quality:
+            videos = get_encodings(title_slug, manifest)
+            try:
+                video = videos[int(args.quality) - 1]
+            except IndexError:
+                raise Exception('Selected quality doesn''t exist')
+            ts_urls = get_ts_urls(video.m3u8_location)
+            temp_dir = tempfile.TemporaryDirectory()
+            print(f'Downloading {video.title}')
+            out_files = download_ts_files(temp_dir, ts_urls)
+            print('Merging files')
+            merge_ts(out_files, video.title)
+            temp_dir.cleanup()
+
     print('Done!')
 
 
-def get_videos(title, manifest):
-    videos = []
+def download_source(video):
+    print(f'Downloading {video.title}')
+    response = requests.get(video.location)
+    with open(video.title, 'wb') as f:
+        for chunk in response.iter_content(chunk_size=1024):
+            if chunk:
+                f.write(chunk)
 
-    # append source
+
+def print_qualities(videos):
+    print(f'S - Source')
+    for i, video in enumerate(videos):
+        print(f'{i + 1} - {video.width}x{video.height}')
+
+
+def get_source(title, manifest):
     source = manifest['formats']['mp4-http']
     video = SourceVideo(title, source['videoCodec'], source['audioCodec'], source['origin']['location'])
-    videos.append(video)
+    return video
 
-    # append compressed videos
+
+def get_encodings(title, manifest):
+    videos = []
     compressed = manifest['formats']['mp4-hls']
     video_codec = compressed['videoCodec']
     audio_codec = compressed['audioCodec']
