@@ -15,7 +15,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('url', help='vod archive url')
     parser.add_argument('-l', '--list', help='list available encodings', action='store_true')
-    parser.add_argument('-q', '--quality', help='define which quality of video to download', default=1)
+    parser.add_argument('-q', '--quality', help='define which quality of video to download', action='store_true', default=1)
     args = parser.parse_args()
 
     context = get_context(args.url)
