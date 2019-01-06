@@ -31,9 +31,9 @@ List available video qualities
 ```console
 $ python3 stream-me-dl.py -l https://www.stream.me/archive/username/video_title/vod_id
 
-0 - Source
-1 - 854x480
-2 - 370x208
+0 - Source - 5422.16 MB
+1 - 854x480 - ~1578.18 MB
+2 - 370x208 - ~215.99 MB
 ```
 Download second listed quality
 ```console
