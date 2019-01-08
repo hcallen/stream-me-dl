@@ -4,7 +4,6 @@ A script to download Stream.me VODs.
 ## Requirements
 
 [Python 3.6+](http://python.org)  
-[Requests](http://docs.python-requests.org/en/master/)
 
 ## Usage
 

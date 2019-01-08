@@ -1,11 +1,10 @@
 import argparse
 import json
 import os
-import requests
 import re
 import shutil
 import tempfile
-from time import sleep
+import urllib.request
 from videos import SourceVideo, CompressedVideo
 import sys
 
@@ -23,8 +22,9 @@ def main():
     title_slug = context['vod']['titleSlug']
     user_slug = context['vod']['userSlug']
     manifest_url = context['vod']['_links']['manifest']['href']
-    response = requests.get(manifest_url)
-    manifest = json.loads(response.text)
+    manifest_r = urllib.request.urlopen(manifest_url)
+    manifest = manifest_r.read().decode('utf-8')
+    manifest = json.loads(manifest)
 
     if args.list:
         videos = get_videos(user_slug, title_slug, manifest)
@@ -38,14 +38,19 @@ def main():
         videos = get_videos(user_slug, title_slug, manifest)
         if args.quality == 0:
             download_source(videos[0])
-            print('Done!')
+            print('\nDone!')
         else:
             try:
                 video = videos[args.quality]
             except IndexError:
                 raise Exception('Selected quality doesn''t exist')
-            download_compressed(video)
-            print('Done!')
+
+            # download compressed video
+            temp_dir = tempfile.TemporaryDirectory()
+            out_files = download_ts_files(temp_dir, video)
+            merge_ts(out_files, video.title)
+            temp_dir.cleanup()
+            print('\nDone!')
     else:
         raise Exception('Selected quality doesn''t exist')
 
@@ -53,20 +58,16 @@ def main():
 def download_source(video):
     complete = 0
     with open(video.title, 'wb') as f:
-        response = requests.get(video.location, stream=True)
-        for chunk in response.iter_content(chunk_size=1024):
-            if chunk:
-                complete += 1024
-                f.write(chunk)
-                percent = (complete / int(response.headers.get('content-length')) * 100)
-                print(f'Downloading {video.title} - {percent:0.2f}%', end='\r')
-
-
-def download_compressed(video):
-    temp_dir = tempfile.TemporaryDirectory()
-    out_files = download_ts_files(temp_dir, video)
-    merge_ts(out_files, video.title)
-    temp_dir.cleanup()
+        response = urllib.request.urlopen(video.location)
+        block_size = 1024
+        while True:
+            buffer = response.read(block_size)
+            if not buffer:
+                break
+            complete += 1024
+            f.write(buffer)
+            percent = (complete / video.content_length) * 100
+            print(f'Downloading {video.title} - {percent:0.2f}%', end='\r')
 
 
 def print_qualities(videos):
@@ -102,8 +103,9 @@ def get_videos(user, title, manifest):
 
 
 def get_context(url):
-    response = requests.get(url)
-    text = response.text.replace('\n', '').replace('\t', '')
+    response = urllib.request.urlopen(url)
+    html = response.read().decode('utf-8')
+    text = html.replace('\n', '').replace('\t', '')
     match = re.search('<script>__context\s=\s(.*);</script>', text)
     if match:
         context = match.group(1)
@@ -116,23 +118,20 @@ def download_ts_files(temp_dir, video):
     out_files = []
     i = 0
     while i < len(video.ts_urls):
-        try:
-            percent = ((i + 1) / len(video.ts_urls)) * 100
-            print(f'Downloading {video.title} - part {i + 1} of {len(video.ts_urls)} - {percent:0.2f}%', end='\r')
-            out_file = os.path.join(temp_dir.name, str(i) + '.ts')
-            with open(out_file, 'wb') as f:
-                response = requests.get(video.ts_urls[i], stream=True)
-                for chunk in response.iter_content(chunk_size=1024):
-                    if chunk:
-                        f.write(chunk)
-            out_files.append(out_file)
-            i += 1
+        percent = ((i + 1) / len(video.ts_urls)) * 100
+        print(f'Downloading {video.title} - part {i + 1} of {len(video.ts_urls)} - {percent:0.2f}%', end='\r')
+        out_file = os.path.join(temp_dir.name, str(i) + '.ts')
+        block_size = 1024
+        response = urllib.request.urlopen(video.ts_urls[i])
+        with open(out_file, 'wb') as f:
+            while True:
+                buffer = response.read(block_size)
+                if not buffer:
+                    break
+                f.write(buffer)
+        out_files.append(out_file)
+        i += 1
 
-        except requests.ConnectionError:
-            print('')
-            print(f'Failed to download part {i + 1} of {len(video.ts_urls)}')
-            print(f'Retrying download')
-            sleep(3)
     print('')
     return out_files
 

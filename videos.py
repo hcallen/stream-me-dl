@@ -1,4 +1,4 @@
-import requests
+import urllib.request
 import re
 
 
@@ -11,26 +11,24 @@ class Video(object):
 
 
 class SourceVideo(Video):
-    source = True
 
     def __init__(self, user_slug, title_slug, video_codec, audio_codec, location):
         Video.__init__(self, user_slug, title_slug, video_codec, audio_codec)
         self.location = location
         self.title = f'{self.user_slug}-{self.title_slug}-source.mp4'
-        self._size = None
+        self._content_length = None
+        self.size = self.content_length / 1000000
 
     @property
-    def size(self):
-        if self._size:
-            return self._size
-        content_length = requests.head(self.location).headers['Content-length']
-        # convert to MBs
-        self._size = int(content_length) / 1000000
-        return self._size
+    def content_length(self):
+        if self._content_length:
+            return self._content_length
+        response = urllib.request.urlopen(self.location)
+        self._content_length = int(response.getheader('Content-Length'))
+        return self._content_length
 
 
 class CompressedVideo(Video):
-    source = False
 
     def __init__(self, user_slug, title_slug, video_codec, audio_codec, video_width, video_height, video_kbps,
                  audio_kbps, m3u8_location):
@@ -60,7 +58,7 @@ class CompressedVideo(Video):
     def m3u8(self):
         if self._m3u8:
             return self._m3u8
-        self._m3u8 = requests.get(self.m3u8_location).text
+        self._m3u8 = urllib.request.urlopen(self.m3u8_location).read().decode('utf-8')
         return self._m3u8
 
     @property
@@ -78,8 +76,6 @@ class CompressedVideo(Video):
     def size(self):
         if self._size:
             return self._size
-        # minutes
-        min = self.duration / 60
         # convert to MBs
-        self._size = (self.video_kbps + self.audio_kbps) * min * 0.0075
+        self._size = (self.video_kbps + self.audio_kbps) * (self.duration/60) * 0.0075
         return self._size
