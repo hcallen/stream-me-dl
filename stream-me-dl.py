@@ -87,18 +87,19 @@ def get_videos(user, title, manifest):
     videos.append(source_video)
 
     # add compressed
-    compressed = manifest['formats']['mp4-hls']
-    video_codec = compressed['videoCodec']
-    audio_codec = compressed['audioCodec']
-    for encoding in compressed['encodings']:
-        video_width = encoding['videoWidth']
-        video_height = encoding['videoHeight']
-        video_kbps = encoding['videoKbps']
-        audio_kbps = encoding['audioKbps']
-        m3u8_location = encoding['location']
-        compressed_video = CompressedVideo(user, title, video_codec, audio_codec, video_width, video_height, video_kbps,
-                                           audio_kbps, m3u8_location)
-        videos.append(compressed_video)
+    if 'mp4-hls' in manifest['formats'].keys():
+        compressed = manifest['formats']['mp4-hls']
+        video_codec = compressed['videoCodec']
+        audio_codec = compressed['audioCodec']
+        for encoding in compressed['encodings']:
+            video_width = encoding['videoWidth']
+            video_height = encoding['videoHeight']
+            video_kbps = encoding['videoKbps']
+            audio_kbps = encoding['audioKbps']
+            m3u8_location = encoding['location']
+            compressed_video = CompressedVideo(user, title, video_codec, audio_codec, video_width, video_height, video_kbps,
+                                               audio_kbps, m3u8_location)
+            videos.append(compressed_video)
     return videos
 
 
