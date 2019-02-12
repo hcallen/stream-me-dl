@@ -22,7 +22,7 @@ optional arguments:
 
 ```
 
-Download highest quality compressed video available
+Download highest quality compressed video available (quality '1')
 ```console
 $ python3 stream-me-dl.py https://www.stream.me/archive/username/video_title/vod_id
 ```
