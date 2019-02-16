@@ -35,7 +35,10 @@ def main():
         raise Exception('Selected quality doesn\'t exist')
 
     # download video
-    video = videos[args.quality]
+    try:
+        video = videos[args.quality]
+    except IndexError:
+        video = videos[0]
     video.download()
     sys.exit(0)
 
