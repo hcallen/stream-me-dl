@@ -1,3 +1,5 @@
+# DEPRECATED
+
 # Stream.me VOD Downloader
 A script to download Stream.me VODs.
 
